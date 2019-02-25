@@ -17,7 +17,7 @@ from six.moves import cStringIO
 from . import _ratematrix_PES
 from ._markovstatemodel import _transmat_mle_prinz
 from .core import (_MappingTransformMixin, _CountsMSMMixin, _dict_compose,
-                   _solve_ratemat_eigensystem, _SampleMSMMixin)
+                   _solve_PES_ratemat_eigensystem, _SampleMSMMixin)
 from ..base import BaseEstimator
 from ..utils import printoptions
 
@@ -165,7 +165,7 @@ class PESContinuousTimeMSM(BaseEstimator, _MappingTransformMixin,
             n_timescales = self.n_states_ - 1
         k = n_timescales + 1
         self.eigenvalues_, self.left_eigenvectors_, self.right_eigenvectors_ = \
-            _solve_ratemat_eigensystem(self.theta_, k, self.n_states_)
+            _solve_PES_ratemat_eigensystem(self.theta_, k, self.n_states_)
 
         self.timescales_ = -1 / self.eigenvalues_[1:]
 

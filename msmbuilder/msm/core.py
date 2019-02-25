@@ -14,6 +14,7 @@ from sklearn.base import TransformerMixin
 from sklearn.utils import check_random_state
 
 from . import _ratematrix
+from . import _ratematrix_PES
 from ..utils import list_of_1d
 
 __all__ = [
@@ -306,6 +307,54 @@ class _SampleMSMMixin(object):
                 selected_pairs_by_state.append([])
 
         return np.array(selected_pairs_by_state)
+
+
+def _solve_PES_ratemat_eigensystem(theta, k, n):
+    """Find the dominant eigenpairs of a reversible rate matrix (master
+    equation)
+
+    Parameters
+    ----------
+    theta : ndarray, shape=(n_params,)
+        The free parameters of the rate matrix
+    k : int
+        The number of eigenpairs to find
+    n : int
+        The number of states
+
+    Notes
+    -----
+    Normalize the left (:math:`\phi`) and right (:math:``\psi``) eigenfunctions
+    according to the following criteria.
+      * The first left eigenvector, \phi_1, _is_ the stationary
+        distribution, and thus should be normalized to sum to 1.
+      * The left-right eigenpairs should be biorthonormal:
+        <\phi_i, \psi_j> = \delta_{ij}
+      * The left eigenvectors should satisfy
+        <\phi_i, \phi_i>_{\mu^{-1}} = 1
+      * The right eigenvectors should satisfy <\psi_i, \psi_i>_{\mu} = 1
+
+    Returns
+    -------
+    eigvals : np.ndarray, shape=(k,)
+        The largest `k` eigenvalues
+    lv : np.ndarray, shape=(n_states, k)
+        The normalized left eigenvectors (:math:`\phi`) of the rate matrix.
+    rv :  np.ndarray, shape=(n_states, k)
+        The normalized right eigenvectors (:math:`\psi`) of the rate matrix.
+    """
+    S = np.zeros((n, n))
+    pi = np.exp(theta[-n:])
+    pi = pi / pi.sum()
+
+    _ratematrix_PES.build_ratemat(theta, n, S, which='S')
+    u, lv, rv = map(np.asarray, _ratematrix_PES.eig_K(S, n, pi, 'S'))
+    order = np.argsort(-u)
+    u = u[order[:k]]
+    lv = lv[:, order[:k]]
+    rv = rv[:, order[:k]]
+
+    return _normalize_eigensystem(u, lv, rv)
 
 
 def _solve_ratemat_eigensystem(theta, k, n):

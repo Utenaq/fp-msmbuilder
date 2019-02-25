@@ -67,7 +67,6 @@ def test_dK_dtheta_1():
         for j in range(n):
             assert check_grad(func, grad, theta, i, j) < 1e-7
 
-'''
 def test_dK_dtheta_2():
     # test function `dK_dtheta_A` to make sure that the part that hadamards
     # the matrix against A is correct.
@@ -86,7 +85,6 @@ def test_dK_dtheta_2():
 
         np.testing.assert_approx_equal(value1, value2)
         np.testing.assert_approx_equal(value1, value3)
-'''
 
 def test_dK_dtheta_3():
     # test dK_dtheta_ij vs dK_dtheta_u. both return slices of the same 3D
@@ -158,7 +156,7 @@ def test_dK_dtheta_5():
     np.testing.assert_almost_equal(dK1, dK3)
     np.testing.assert_almost_equal(dK2, dK3)
 
-'''
+
 def test_grad_logl_1():
     # test the gradient of the `loglikelihood` against a numerical gradient
     n = 4
@@ -173,7 +171,7 @@ def test_grad_logl_1():
         return _ratematrix_PES.loglikelihood(theta, C, t=t)[1]
 
     assert check_grad(func, grad, theta0) < 1e-4
-'''
+
 
 def test_dw_1():
     # test the gradient of the eigenvalues of K
@@ -215,11 +213,11 @@ def test_dw_1():
         g2 = grad(theta0, i)
         assert np.linalg.norm(g1 - g2) < 2e-6
 
-'''
+
 def test_hessian_1():
     n = 3
     seqs = [
-        [1, 1, 1, 1, 1, 2, 2, 2, 2, 1, 1, 1, 1, 3, 3, 3, 3, 3, 2, 2, 2, 2, 2, 2,
+        [1, 1, 1, 1, 1, 2, 2, 2, 2, 1, 1, 1, 1, 2, 3, 3, 3, 3, 3, 2, 2, 2, 2, 2, 2,
          1, 1, 1, 1, 2, 3, 3, 3, 3]]
 
     model = PESContinuousTimeMSM().fit(seqs)
@@ -296,7 +294,7 @@ def test_hessian_2():
     #
     # # not sure what the cutoff here should be (see plot_test_hessian)
     # assert np.linalg.norm(hessian1-hessian2) < 1e-6
-'''
+
 
 def test_hessian_3():
     grid = NDGrid(n_bins_per_feature=4, min=-np.pi, max=np.pi)
@@ -313,7 +311,7 @@ def test_hessian_3():
     print('Uncertainty K\n', model.uncertainty_K())
     print('Uncertainty eigs\n', model.uncertainty_eigenvalues())
 
-
+'''
 def test_fit_1():
     # call fit, compare to MSM
     sequence = [0, 0, 0, 1, 1, 1, 0, 0, 2, 2, 0, 1, 1, 1, 2, 2, 2, 2, 2]
@@ -325,7 +323,7 @@ def test_fit_1():
 
     # they shouldn't be equal in general, but for this input they seem to be
     np.testing.assert_array_almost_equal(model.transmat_, msm.transmat_)
-
+'''
 
 def test_fit_2():
     grid = NDGrid(n_bins_per_feature=5, min=-np.pi, max=np.pi)

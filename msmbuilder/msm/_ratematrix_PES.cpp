@@ -1657,6 +1657,13 @@ static CYTHON_INLINE int __Pyx_SetItemInt_Generic(PyObject *o, PyObject *j, PyOb
 static CYTHON_INLINE int __Pyx_SetItemInt_Fast(PyObject *o, Py_ssize_t i, PyObject *v,
                                                int is_list, int wraparound, int boundscheck);
 
+/* abs_int.proto */
+static CYTHON_INLINE unsigned int __Pyx_abs_int(int x) {
+    if (unlikely(x == -INT_MAX-1))
+        return ((unsigned int)INT_MAX) + 1U;
+    return (unsigned int) abs(x);
+}
+
 /* GetItemInt.proto */
 #define __Pyx_GetItemInt(o, i, type, is_signed, to_py_func, is_list, wraparound, boundscheck)\
     (__Pyx_fits_Py_ssize_t(i, type, is_signed) ?\
@@ -8310,22 +8317,22 @@ static double __pyx_f_10msmbuilder_3msm_15_ratematrix_PES_dK_dtheta_ij(__Pyx_mem
     /* "msmbuilder/msm/_ratematrix_PES.pyx":197
  *         #              *
  * 
- *         for j in range (i-1, i+1): #NOTE: Simplified for the tridiagonal case             # <<<<<<<<<<<<<<
- *             if i<0 or i==j or i>=n:
+ *         for j in range (i-1, i+2): #NOTE: Simplified for the tridiagonal case             # <<<<<<<<<<<<<<
+ *             if j<0 or i==j or j>=n:
  *                 continue
  */
-    __pyx_t_24 = (__pyx_v_i + 1);
+    __pyx_t_24 = (__pyx_v_i + 2);
     for (__pyx_t_25 = (__pyx_v_i - 1); __pyx_t_25 < __pyx_t_24; __pyx_t_25+=1) {
       __pyx_v_j = __pyx_t_25;
 
       /* "msmbuilder/msm/_ratematrix_PES.pyx":198
  * 
- *         for j in range (i-1, i+1): #NOTE: Simplified for the tridiagonal case
- *             if i<0 or i==j or i>=n:             # <<<<<<<<<<<<<<
+ *         for j in range (i-1, i+2): #NOTE: Simplified for the tridiagonal case
+ *             if j<0 or i==j or j>=n:             # <<<<<<<<<<<<<<
  *                 continue
  * 
  */
-      __pyx_t_26 = ((__pyx_v_i < 0) != 0);
+      __pyx_t_26 = ((__pyx_v_j < 0) != 0);
       if (!__pyx_t_26) {
       } else {
         __pyx_t_1 = __pyx_t_26;
@@ -8337,14 +8344,14 @@ static double __pyx_f_10msmbuilder_3msm_15_ratematrix_PES_dK_dtheta_ij(__Pyx_mem
         __pyx_t_1 = __pyx_t_26;
         goto __pyx_L10_bool_binop_done;
       }
-      __pyx_t_26 = ((__pyx_v_i >= __pyx_v_n) != 0);
+      __pyx_t_26 = ((__pyx_v_j >= __pyx_v_n) != 0);
       __pyx_t_1 = __pyx_t_26;
       __pyx_L10_bool_binop_done:;
       if (__pyx_t_1) {
 
         /* "msmbuilder/msm/_ratematrix_PES.pyx":199
- *         for j in range (i-1, i+1): #NOTE: Simplified for the tridiagonal case
- *             if i<0 or i==j or i>=n:
+ *         for j in range (i-1, i+2): #NOTE: Simplified for the tridiagonal case
+ *             if j<0 or i==j or j>=n:
  *                 continue             # <<<<<<<<<<<<<<
  * 
  *             k = ij_to_k(i, j, n)
@@ -8353,8 +8360,8 @@ static double __pyx_f_10msmbuilder_3msm_15_ratematrix_PES_dK_dtheta_ij(__Pyx_mem
 
         /* "msmbuilder/msm/_ratematrix_PES.pyx":198
  * 
- *         for j in range (i-1, i+1): #NOTE: Simplified for the tridiagonal case
- *             if i<0 or i==j or i>=n:             # <<<<<<<<<<<<<<
+ *         for j in range (i-1, i+2): #NOTE: Simplified for the tridiagonal case
+ *             if j<0 or i==j or j>=n:             # <<<<<<<<<<<<<<
  *                 continue
  * 
  */
@@ -8721,19 +8728,20 @@ static int __pyx_f_10msmbuilder_3msm_15_ratematrix_PES_dK_dtheta_u(__Pyx_memview
   int __pyx_t_2;
   Py_ssize_t __pyx_t_3;
   Py_ssize_t __pyx_t_4;
-  Py_ssize_t __pyx_t_5;
+  unsigned int __pyx_t_5;
   Py_ssize_t __pyx_t_6;
-  __Pyx_memviewslice __pyx_t_7 = { 0, 0, { 0 }, { 0 }, { 0 } };
-  Py_ssize_t __pyx_t_8;
+  Py_ssize_t __pyx_t_7;
+  __Pyx_memviewslice __pyx_t_8 = { 0, 0, { 0 }, { 0 }, { 0 } };
   Py_ssize_t __pyx_t_9;
-  long __pyx_t_10;
-  npy_intp __pyx_t_11;
-  int __pyx_t_12;
-  Py_ssize_t __pyx_t_13;
+  Py_ssize_t __pyx_t_10;
+  long __pyx_t_11;
+  npy_intp __pyx_t_12;
+  int __pyx_t_13;
   Py_ssize_t __pyx_t_14;
   Py_ssize_t __pyx_t_15;
   Py_ssize_t __pyx_t_16;
   Py_ssize_t __pyx_t_17;
+  Py_ssize_t __pyx_t_18;
   if (__pyx_optional_args) {
     if (__pyx_optional_args->__pyx_n > 0) {
       __pyx_v_A = __pyx_optional_args->A;
@@ -8812,7 +8820,7 @@ static int __pyx_f_10msmbuilder_3msm_15_ratematrix_PES_dK_dtheta_u(__Pyx_memview
  *     pi_i = exp(theta[n_trid+i])
  *     pi_j = exp(theta[n_trid+j])             # <<<<<<<<<<<<<<
  * 
- *     if i != j:
+ *     if abs(i - j) == 1:
  */
   __pyx_t_4 = (__pyx_v_n_trid + __pyx_v_j);
   __pyx_v_pi_j = exp((*((double *) ( /* dim=0 */ ((char *) (((double *) __pyx_v_theta.data) + __pyx_t_4)) ))));
@@ -8820,25 +8828,26 @@ static int __pyx_f_10msmbuilder_3msm_15_ratematrix_PES_dK_dtheta_u(__Pyx_memview
   /* "msmbuilder/msm/_ratematrix_PES.pyx":275
  *     pi_j = exp(theta[n_trid+j])
  * 
- *     if i != j:             # <<<<<<<<<<<<<<
+ *     if abs(i - j) == 1:             # <<<<<<<<<<<<<<
  *         s_ij = theta[u]
  *         sqrt_pi_j_over_i = sqrt(pi_j / pi_i)
  */
-  __pyx_t_2 = ((__pyx_v_i != __pyx_v_j) != 0);
+  __pyx_t_5 = __Pyx_abs_int((__pyx_v_i - __pyx_v_j)); 
+  __pyx_t_2 = ((__pyx_t_5 == 1) != 0);
   if (__pyx_t_2) {
 
     /* "msmbuilder/msm/_ratematrix_PES.pyx":276
  * 
- *     if i != j:
+ *     if abs(i - j) == 1:
  *         s_ij = theta[u]             # <<<<<<<<<<<<<<
  *         sqrt_pi_j_over_i = sqrt(pi_j / pi_i)
  *         out[u] += sqrt_pi_j_over_i
  */
-    __pyx_t_5 = __pyx_v_u;
-    __pyx_v_s_ij = (*((double *) ( /* dim=0 */ ((char *) (((double *) __pyx_v_theta.data) + __pyx_t_5)) )));
+    __pyx_t_6 = __pyx_v_u;
+    __pyx_v_s_ij = (*((double *) ( /* dim=0 */ ((char *) (((double *) __pyx_v_theta.data) + __pyx_t_6)) )));
 
     /* "msmbuilder/msm/_ratematrix_PES.pyx":277
- *     if i != j:
+ *     if abs(i - j) == 1:
  *         s_ij = theta[u]
  *         sqrt_pi_j_over_i = sqrt(pi_j / pi_i)             # <<<<<<<<<<<<<<
  *         out[u] += sqrt_pi_j_over_i
@@ -8853,8 +8862,8 @@ static int __pyx_f_10msmbuilder_3msm_15_ratematrix_PES_dK_dtheta_u(__Pyx_memview
  *         if compute_out2:
  *             cdaxpy(sqrt_pi_j_over_i, x=A[u, :], y=out2)
  */
-    __pyx_t_6 = __pyx_v_u;
-    *((double *) ( /* dim=0 */ (__pyx_v_out.data + __pyx_t_6 * __pyx_v_out.strides[0]) )) += __pyx_v_sqrt_pi_j_over_i;
+    __pyx_t_7 = __pyx_v_u;
+    *((double *) ( /* dim=0 */ (__pyx_v_out.data + __pyx_t_7 * __pyx_v_out.strides[0]) )) += __pyx_v_sqrt_pi_j_over_i;
 
     /* "msmbuilder/msm/_ratematrix_PES.pyx":279
  *         sqrt_pi_j_over_i = sqrt(pi_j / pi_i)
@@ -8873,9 +8882,9 @@ static int __pyx_f_10msmbuilder_3msm_15_ratematrix_PES_dK_dtheta_u(__Pyx_memview
  * 
  *         # for u in n_trid...size-1
  */
-      __pyx_t_7.data = __pyx_v_A.data;
-      __pyx_t_7.memview = __pyx_v_A.memview;
-      __PYX_INC_MEMVIEW(&__pyx_t_7, 0);
+      __pyx_t_8.data = __pyx_v_A.data;
+      __pyx_t_8.memview = __pyx_v_A.memview;
+      __PYX_INC_MEMVIEW(&__pyx_t_8, 0);
       {
     Py_ssize_t __pyx_tmp_idx = __pyx_v_u;
     Py_ssize_t __pyx_tmp_shape = __pyx_v_A.shape[0];
@@ -8892,17 +8901,17 @@ static int __pyx_f_10msmbuilder_3msm_15_ratematrix_PES_dK_dtheta_u(__Pyx_memview
             #endif
         __PYX_ERR(2, 280, __pyx_L1_error)
     }
-        __pyx_t_7.data += __pyx_tmp_idx * __pyx_tmp_stride;
+        __pyx_t_8.data += __pyx_tmp_idx * __pyx_tmp_stride;
 }
 
-__pyx_t_7.shape[0] = __pyx_v_A.shape[1];
-__pyx_t_7.strides[0] = __pyx_v_A.strides[1];
-    __pyx_t_7.suboffsets[0] = -1;
+__pyx_t_8.shape[0] = __pyx_v_A.shape[1];
+__pyx_t_8.strides[0] = __pyx_v_A.strides[1];
+    __pyx_t_8.suboffsets[0] = -1;
 
-__pyx_f_10msmbuilder_3msm_15_ratematrix_PES_cdaxpy(__pyx_v_sqrt_pi_j_over_i, __pyx_t_7, __pyx_v_out2);
-      __PYX_XDEC_MEMVIEW(&__pyx_t_7, 0);
-      __pyx_t_7.memview = NULL;
-      __pyx_t_7.data = NULL;
+__pyx_f_10msmbuilder_3msm_15_ratematrix_PES_cdaxpy(__pyx_v_sqrt_pi_j_over_i, __pyx_t_8, __pyx_v_out2);
+      __PYX_XDEC_MEMVIEW(&__pyx_t_8, 0);
+      __pyx_t_8.memview = NULL;
+      __pyx_t_8.data = NULL;
 
       /* "msmbuilder/msm/_ratematrix_PES.pyx":279
  *         sqrt_pi_j_over_i = sqrt(pi_j / pi_i)
@@ -8939,8 +8948,8 @@ __pyx_f_10msmbuilder_3msm_15_ratematrix_PES_cdaxpy(__pyx_v_sqrt_pi_j_over_i, __p
  *             out[n_trid + j] += val
  *             if compute_out2:
  */
-      __pyx_t_8 = (__pyx_v_n_trid + __pyx_v_i);
-      *((double *) ( /* dim=0 */ (__pyx_v_out.data + __pyx_t_8 * __pyx_v_out.strides[0]) )) -= __pyx_v_val;
+      __pyx_t_9 = (__pyx_v_n_trid + __pyx_v_i);
+      *((double *) ( /* dim=0 */ (__pyx_v_out.data + __pyx_t_9 * __pyx_v_out.strides[0]) )) -= __pyx_v_val;
 
       /* "msmbuilder/msm/_ratematrix_PES.pyx":286
  *             val = 0.5 * s_ij * sqrt_pi_j_over_i
@@ -8949,8 +8958,8 @@ __pyx_f_10msmbuilder_3msm_15_ratematrix_PES_cdaxpy(__pyx_v_sqrt_pi_j_over_i, __p
  *             if compute_out2:
  *                 cdaxpy(-val, x=A[n_trid + i, :], y=out2)
  */
-      __pyx_t_9 = (__pyx_v_n_trid + __pyx_v_j);
-      *((double *) ( /* dim=0 */ (__pyx_v_out.data + __pyx_t_9 * __pyx_v_out.strides[0]) )) += __pyx_v_val;
+      __pyx_t_10 = (__pyx_v_n_trid + __pyx_v_j);
+      *((double *) ( /* dim=0 */ (__pyx_v_out.data + __pyx_t_10 * __pyx_v_out.strides[0]) )) += __pyx_v_val;
 
       /* "msmbuilder/msm/_ratematrix_PES.pyx":287
  *             out[n_trid + i] -= val
@@ -8969,9 +8978,9 @@ __pyx_f_10msmbuilder_3msm_15_ratematrix_PES_cdaxpy(__pyx_v_sqrt_pi_j_over_i, __p
  *                 cdaxpy(val, x=A[n_trid + j, :], y=out2)
  * 
  */
-        __pyx_t_7.data = __pyx_v_A.data;
-        __pyx_t_7.memview = __pyx_v_A.memview;
-        __PYX_INC_MEMVIEW(&__pyx_t_7, 0);
+        __pyx_t_8.data = __pyx_v_A.data;
+        __pyx_t_8.memview = __pyx_v_A.memview;
+        __PYX_INC_MEMVIEW(&__pyx_t_8, 0);
         {
     Py_ssize_t __pyx_tmp_idx = (__pyx_v_n_trid + __pyx_v_i);
     Py_ssize_t __pyx_tmp_shape = __pyx_v_A.shape[0];
@@ -8988,28 +8997,28 @@ __pyx_f_10msmbuilder_3msm_15_ratematrix_PES_cdaxpy(__pyx_v_sqrt_pi_j_over_i, __p
             #endif
         __PYX_ERR(2, 288, __pyx_L1_error)
     }
-        __pyx_t_7.data += __pyx_tmp_idx * __pyx_tmp_stride;
+        __pyx_t_8.data += __pyx_tmp_idx * __pyx_tmp_stride;
 }
 
-__pyx_t_7.shape[0] = __pyx_v_A.shape[1];
-__pyx_t_7.strides[0] = __pyx_v_A.strides[1];
-    __pyx_t_7.suboffsets[0] = -1;
+__pyx_t_8.shape[0] = __pyx_v_A.shape[1];
+__pyx_t_8.strides[0] = __pyx_v_A.strides[1];
+    __pyx_t_8.suboffsets[0] = -1;
 
-__pyx_f_10msmbuilder_3msm_15_ratematrix_PES_cdaxpy((-__pyx_v_val), __pyx_t_7, __pyx_v_out2);
-        __PYX_XDEC_MEMVIEW(&__pyx_t_7, 0);
-        __pyx_t_7.memview = NULL;
-        __pyx_t_7.data = NULL;
+__pyx_f_10msmbuilder_3msm_15_ratematrix_PES_cdaxpy((-__pyx_v_val), __pyx_t_8, __pyx_v_out2);
+        __PYX_XDEC_MEMVIEW(&__pyx_t_8, 0);
+        __pyx_t_8.memview = NULL;
+        __pyx_t_8.data = NULL;
 
         /* "msmbuilder/msm/_ratematrix_PES.pyx":289
  *             if compute_out2:
  *                 cdaxpy(-val, x=A[n_trid + i, :], y=out2)
  *                 cdaxpy(val, x=A[n_trid + j, :], y=out2)             # <<<<<<<<<<<<<<
  * 
- *     else:
+ *     elif i==j:
  */
-        __pyx_t_7.data = __pyx_v_A.data;
-        __pyx_t_7.memview = __pyx_v_A.memview;
-        __PYX_INC_MEMVIEW(&__pyx_t_7, 0);
+        __pyx_t_8.data = __pyx_v_A.data;
+        __pyx_t_8.memview = __pyx_v_A.memview;
+        __PYX_INC_MEMVIEW(&__pyx_t_8, 0);
         {
     Py_ssize_t __pyx_tmp_idx = (__pyx_v_n_trid + __pyx_v_j);
     Py_ssize_t __pyx_tmp_shape = __pyx_v_A.shape[0];
@@ -9026,17 +9035,17 @@ __pyx_f_10msmbuilder_3msm_15_ratematrix_PES_cdaxpy((-__pyx_v_val), __pyx_t_7, __
             #endif
         __PYX_ERR(2, 289, __pyx_L1_error)
     }
-        __pyx_t_7.data += __pyx_tmp_idx * __pyx_tmp_stride;
+        __pyx_t_8.data += __pyx_tmp_idx * __pyx_tmp_stride;
 }
 
-__pyx_t_7.shape[0] = __pyx_v_A.shape[1];
-__pyx_t_7.strides[0] = __pyx_v_A.strides[1];
-    __pyx_t_7.suboffsets[0] = -1;
+__pyx_t_8.shape[0] = __pyx_v_A.shape[1];
+__pyx_t_8.strides[0] = __pyx_v_A.strides[1];
+    __pyx_t_8.suboffsets[0] = -1;
 
-__pyx_f_10msmbuilder_3msm_15_ratematrix_PES_cdaxpy(__pyx_v_val, __pyx_t_7, __pyx_v_out2);
-        __PYX_XDEC_MEMVIEW(&__pyx_t_7, 0);
-        __pyx_t_7.memview = NULL;
-        __pyx_t_7.data = NULL;
+__pyx_f_10msmbuilder_3msm_15_ratematrix_PES_cdaxpy(__pyx_v_val, __pyx_t_8, __pyx_v_out2);
+        __PYX_XDEC_MEMVIEW(&__pyx_t_8, 0);
+        __pyx_t_8.memview = NULL;
+        __pyx_t_8.data = NULL;
 
         /* "msmbuilder/msm/_ratematrix_PES.pyx":287
  *             out[n_trid + i] -= val
@@ -9059,51 +9068,60 @@ __pyx_f_10msmbuilder_3msm_15_ratematrix_PES_cdaxpy(__pyx_v_val, __pyx_t_7, __pyx
     /* "msmbuilder/msm/_ratematrix_PES.pyx":275
  *     pi_j = exp(theta[n_trid+j])
  * 
- *     if i != j:             # <<<<<<<<<<<<<<
+ *     if abs(i - j) == 1:             # <<<<<<<<<<<<<<
  *         s_ij = theta[u]
  *         sqrt_pi_j_over_i = sqrt(pi_j / pi_i)
  */
     goto __pyx_L5;
   }
 
-  /* "msmbuilder/msm/_ratematrix_PES.pyx":292
+  /* "msmbuilder/msm/_ratematrix_PES.pyx":291
+ *                 cdaxpy(val, x=A[n_trid + j, :], y=out2)
  * 
- *     else:
- *         for jj in range(i-1, i+1):             # <<<<<<<<<<<<<<
+ *     elif i==j:             # <<<<<<<<<<<<<<
+ *         for jj in range(i-1, i+2):
+ *             if jj < 0 or jj==i or jj >= n:
+ */
+  __pyx_t_2 = ((__pyx_v_i == __pyx_v_j) != 0);
+  if (__pyx_t_2) {
+
+    /* "msmbuilder/msm/_ratematrix_PES.pyx":292
+ * 
+ *     elif i==j:
+ *         for jj in range(i-1, i+2):             # <<<<<<<<<<<<<<
  *             if jj < 0 or jj==i or jj >= n:
  *                 continue
  */
-  /*else*/ {
-    __pyx_t_10 = (__pyx_v_i + 1);
-    for (__pyx_t_11 = (__pyx_v_i - 1); __pyx_t_11 < __pyx_t_10; __pyx_t_11+=1) {
-      __pyx_v_jj = __pyx_t_11;
+    __pyx_t_11 = (__pyx_v_i + 2);
+    for (__pyx_t_12 = (__pyx_v_i - 1); __pyx_t_12 < __pyx_t_11; __pyx_t_12+=1) {
+      __pyx_v_jj = __pyx_t_12;
 
       /* "msmbuilder/msm/_ratematrix_PES.pyx":293
- *     else:
- *         for jj in range(i-1, i+1):
+ *     elif i==j:
+ *         for jj in range(i-1, i+2):
  *             if jj < 0 or jj==i or jj >= n:             # <<<<<<<<<<<<<<
  *                 continue
  * 
  */
-      __pyx_t_12 = ((__pyx_v_jj < 0) != 0);
-      if (!__pyx_t_12) {
+      __pyx_t_13 = ((__pyx_v_jj < 0) != 0);
+      if (!__pyx_t_13) {
       } else {
-        __pyx_t_2 = __pyx_t_12;
+        __pyx_t_2 = __pyx_t_13;
         goto __pyx_L12_bool_binop_done;
       }
-      __pyx_t_12 = ((__pyx_v_jj == __pyx_v_i) != 0);
-      if (!__pyx_t_12) {
+      __pyx_t_13 = ((__pyx_v_jj == __pyx_v_i) != 0);
+      if (!__pyx_t_13) {
       } else {
-        __pyx_t_2 = __pyx_t_12;
+        __pyx_t_2 = __pyx_t_13;
         goto __pyx_L12_bool_binop_done;
       }
-      __pyx_t_12 = ((__pyx_v_jj >= __pyx_v_n) != 0);
-      __pyx_t_2 = __pyx_t_12;
+      __pyx_t_13 = ((__pyx_v_jj >= __pyx_v_n) != 0);
+      __pyx_t_2 = __pyx_t_13;
       __pyx_L12_bool_binop_done:;
       if (__pyx_t_2) {
 
         /* "msmbuilder/msm/_ratematrix_PES.pyx":294
- *         for jj in range(i-1, i+1):
+ *         for jj in range(i-1, i+2):
  *             if jj < 0 or jj==i or jj >= n:
  *                 continue             # <<<<<<<<<<<<<<
  * 
@@ -9112,8 +9130,8 @@ __pyx_f_10msmbuilder_3msm_15_ratematrix_PES_cdaxpy(__pyx_v_val, __pyx_t_7, __pyx
         goto __pyx_L9_continue;
 
         /* "msmbuilder/msm/_ratematrix_PES.pyx":293
- *     else:
- *         for jj in range(i-1, i+1):
+ *     elif i==j:
+ *         for jj in range(i-1, i+2):
  *             if jj < 0 or jj==i or jj >= n:             # <<<<<<<<<<<<<<
  *                 continue
  * 
@@ -9136,8 +9154,8 @@ __pyx_f_10msmbuilder_3msm_15_ratematrix_PES_cdaxpy(__pyx_v_val, __pyx_t_7, __pyx
  * 
  *             pi_jj = exp(theta[n_trid+jj])
  */
-      __pyx_t_13 = __pyx_v_u;
-      __pyx_v_s_ij = (*((double *) ( /* dim=0 */ ((char *) (((double *) __pyx_v_theta.data) + __pyx_t_13)) )));
+      __pyx_t_14 = __pyx_v_u;
+      __pyx_v_s_ij = (*((double *) ( /* dim=0 */ ((char *) (((double *) __pyx_v_theta.data) + __pyx_t_14)) )));
 
       /* "msmbuilder/msm/_ratematrix_PES.pyx":299
  *             s_ij = theta[u]
@@ -9146,8 +9164,8 @@ __pyx_f_10msmbuilder_3msm_15_ratematrix_PES_cdaxpy(__pyx_v_val, __pyx_t_7, __pyx
  *             sqrt_pi_j_over_i = sqrt(pi_jj / pi_i)
  * 
  */
-      __pyx_t_14 = (__pyx_v_n_trid + __pyx_v_jj);
-      __pyx_v_pi_jj = exp((*((double *) ( /* dim=0 */ ((char *) (((double *) __pyx_v_theta.data) + __pyx_t_14)) ))));
+      __pyx_t_15 = (__pyx_v_n_trid + __pyx_v_jj);
+      __pyx_v_pi_jj = exp((*((double *) ( /* dim=0 */ ((char *) (((double *) __pyx_v_theta.data) + __pyx_t_15)) ))));
 
       /* "msmbuilder/msm/_ratematrix_PES.pyx":300
  * 
@@ -9165,8 +9183,8 @@ __pyx_f_10msmbuilder_3msm_15_ratematrix_PES_cdaxpy(__pyx_v_val, __pyx_t_7, __pyx
  *             if compute_out2:
  *                 cdaxpy(-sqrt_pi_j_over_i, x=A[u, :], y=out2)
  */
-      __pyx_t_15 = __pyx_v_u;
-      *((double *) ( /* dim=0 */ (__pyx_v_out.data + __pyx_t_15 * __pyx_v_out.strides[0]) )) -= __pyx_v_sqrt_pi_j_over_i;
+      __pyx_t_16 = __pyx_v_u;
+      *((double *) ( /* dim=0 */ (__pyx_v_out.data + __pyx_t_16 * __pyx_v_out.strides[0]) )) -= __pyx_v_sqrt_pi_j_over_i;
 
       /* "msmbuilder/msm/_ratematrix_PES.pyx":303
  * 
@@ -9185,9 +9203,9 @@ __pyx_f_10msmbuilder_3msm_15_ratematrix_PES_cdaxpy(__pyx_v_val, __pyx_t_7, __pyx
  * 
  *             if s_ij != 0:
  */
-        __pyx_t_7.data = __pyx_v_A.data;
-        __pyx_t_7.memview = __pyx_v_A.memview;
-        __PYX_INC_MEMVIEW(&__pyx_t_7, 0);
+        __pyx_t_8.data = __pyx_v_A.data;
+        __pyx_t_8.memview = __pyx_v_A.memview;
+        __PYX_INC_MEMVIEW(&__pyx_t_8, 0);
         {
     Py_ssize_t __pyx_tmp_idx = __pyx_v_u;
     Py_ssize_t __pyx_tmp_shape = __pyx_v_A.shape[0];
@@ -9204,17 +9222,17 @@ __pyx_f_10msmbuilder_3msm_15_ratematrix_PES_cdaxpy(__pyx_v_val, __pyx_t_7, __pyx
             #endif
         __PYX_ERR(2, 304, __pyx_L1_error)
     }
-        __pyx_t_7.data += __pyx_tmp_idx * __pyx_tmp_stride;
+        __pyx_t_8.data += __pyx_tmp_idx * __pyx_tmp_stride;
 }
 
-__pyx_t_7.shape[0] = __pyx_v_A.shape[1];
-__pyx_t_7.strides[0] = __pyx_v_A.strides[1];
-    __pyx_t_7.suboffsets[0] = -1;
+__pyx_t_8.shape[0] = __pyx_v_A.shape[1];
+__pyx_t_8.strides[0] = __pyx_v_A.strides[1];
+    __pyx_t_8.suboffsets[0] = -1;
 
-__pyx_f_10msmbuilder_3msm_15_ratematrix_PES_cdaxpy((-__pyx_v_sqrt_pi_j_over_i), __pyx_t_7, __pyx_v_out2);
-        __PYX_XDEC_MEMVIEW(&__pyx_t_7, 0);
-        __pyx_t_7.memview = NULL;
-        __pyx_t_7.data = NULL;
+__pyx_f_10msmbuilder_3msm_15_ratematrix_PES_cdaxpy((-__pyx_v_sqrt_pi_j_over_i), __pyx_t_8, __pyx_v_out2);
+        __PYX_XDEC_MEMVIEW(&__pyx_t_8, 0);
+        __pyx_t_8.memview = NULL;
+        __pyx_t_8.data = NULL;
 
         /* "msmbuilder/msm/_ratematrix_PES.pyx":303
  * 
@@ -9251,8 +9269,8 @@ __pyx_f_10msmbuilder_3msm_15_ratematrix_PES_cdaxpy((-__pyx_v_sqrt_pi_j_over_i), 
  *                 out[n_trid + jj] -= val
  *                 if compute_out2:
  */
-        __pyx_t_16 = (__pyx_v_n_trid + __pyx_v_i);
-        *((double *) ( /* dim=0 */ (__pyx_v_out.data + __pyx_t_16 * __pyx_v_out.strides[0]) )) += __pyx_v_val;
+        __pyx_t_17 = (__pyx_v_n_trid + __pyx_v_i);
+        *((double *) ( /* dim=0 */ (__pyx_v_out.data + __pyx_t_17 * __pyx_v_out.strides[0]) )) += __pyx_v_val;
 
         /* "msmbuilder/msm/_ratematrix_PES.pyx":309
  *                 val = 0.5 * s_ij * sqrt_pi_j_over_i
@@ -9261,8 +9279,8 @@ __pyx_f_10msmbuilder_3msm_15_ratematrix_PES_cdaxpy((-__pyx_v_sqrt_pi_j_over_i), 
  *                 if compute_out2:
  *                     cdaxpy(val, x=A[n_trid + i, :], y=out2)
  */
-        __pyx_t_17 = (__pyx_v_n_trid + __pyx_v_jj);
-        *((double *) ( /* dim=0 */ (__pyx_v_out.data + __pyx_t_17 * __pyx_v_out.strides[0]) )) -= __pyx_v_val;
+        __pyx_t_18 = (__pyx_v_n_trid + __pyx_v_jj);
+        *((double *) ( /* dim=0 */ (__pyx_v_out.data + __pyx_t_18 * __pyx_v_out.strides[0]) )) -= __pyx_v_val;
 
         /* "msmbuilder/msm/_ratematrix_PES.pyx":310
  *                 out[n_trid + i] += val
@@ -9281,9 +9299,9 @@ __pyx_f_10msmbuilder_3msm_15_ratematrix_PES_cdaxpy((-__pyx_v_sqrt_pi_j_over_i), 
  *                     cdaxpy(-val, x=A[n_trid + jj, :], y=out2)
  * 
  */
-          __pyx_t_7.data = __pyx_v_A.data;
-          __pyx_t_7.memview = __pyx_v_A.memview;
-          __PYX_INC_MEMVIEW(&__pyx_t_7, 0);
+          __pyx_t_8.data = __pyx_v_A.data;
+          __pyx_t_8.memview = __pyx_v_A.memview;
+          __PYX_INC_MEMVIEW(&__pyx_t_8, 0);
           {
     Py_ssize_t __pyx_tmp_idx = (__pyx_v_n_trid + __pyx_v_i);
     Py_ssize_t __pyx_tmp_shape = __pyx_v_A.shape[0];
@@ -9300,17 +9318,17 @@ __pyx_f_10msmbuilder_3msm_15_ratematrix_PES_cdaxpy((-__pyx_v_sqrt_pi_j_over_i), 
             #endif
         __PYX_ERR(2, 311, __pyx_L1_error)
     }
-        __pyx_t_7.data += __pyx_tmp_idx * __pyx_tmp_stride;
+        __pyx_t_8.data += __pyx_tmp_idx * __pyx_tmp_stride;
 }
 
-__pyx_t_7.shape[0] = __pyx_v_A.shape[1];
-__pyx_t_7.strides[0] = __pyx_v_A.strides[1];
-    __pyx_t_7.suboffsets[0] = -1;
+__pyx_t_8.shape[0] = __pyx_v_A.shape[1];
+__pyx_t_8.strides[0] = __pyx_v_A.strides[1];
+    __pyx_t_8.suboffsets[0] = -1;
 
-__pyx_f_10msmbuilder_3msm_15_ratematrix_PES_cdaxpy(__pyx_v_val, __pyx_t_7, __pyx_v_out2);
-          __PYX_XDEC_MEMVIEW(&__pyx_t_7, 0);
-          __pyx_t_7.memview = NULL;
-          __pyx_t_7.data = NULL;
+__pyx_f_10msmbuilder_3msm_15_ratematrix_PES_cdaxpy(__pyx_v_val, __pyx_t_8, __pyx_v_out2);
+          __PYX_XDEC_MEMVIEW(&__pyx_t_8, 0);
+          __pyx_t_8.memview = NULL;
+          __pyx_t_8.data = NULL;
 
           /* "msmbuilder/msm/_ratematrix_PES.pyx":312
  *                 if compute_out2:
@@ -9319,9 +9337,9 @@ __pyx_f_10msmbuilder_3msm_15_ratematrix_PES_cdaxpy(__pyx_v_val, __pyx_t_7, __pyx
  * 
  *     return 0
  */
-          __pyx_t_7.data = __pyx_v_A.data;
-          __pyx_t_7.memview = __pyx_v_A.memview;
-          __PYX_INC_MEMVIEW(&__pyx_t_7, 0);
+          __pyx_t_8.data = __pyx_v_A.data;
+          __pyx_t_8.memview = __pyx_v_A.memview;
+          __PYX_INC_MEMVIEW(&__pyx_t_8, 0);
           {
     Py_ssize_t __pyx_tmp_idx = (__pyx_v_n_trid + __pyx_v_jj);
     Py_ssize_t __pyx_tmp_shape = __pyx_v_A.shape[0];
@@ -9338,17 +9356,17 @@ __pyx_f_10msmbuilder_3msm_15_ratematrix_PES_cdaxpy(__pyx_v_val, __pyx_t_7, __pyx
             #endif
         __PYX_ERR(2, 312, __pyx_L1_error)
     }
-        __pyx_t_7.data += __pyx_tmp_idx * __pyx_tmp_stride;
+        __pyx_t_8.data += __pyx_tmp_idx * __pyx_tmp_stride;
 }
 
-__pyx_t_7.shape[0] = __pyx_v_A.shape[1];
-__pyx_t_7.strides[0] = __pyx_v_A.strides[1];
-    __pyx_t_7.suboffsets[0] = -1;
+__pyx_t_8.shape[0] = __pyx_v_A.shape[1];
+__pyx_t_8.strides[0] = __pyx_v_A.strides[1];
+    __pyx_t_8.suboffsets[0] = -1;
 
-__pyx_f_10msmbuilder_3msm_15_ratematrix_PES_cdaxpy((-__pyx_v_val), __pyx_t_7, __pyx_v_out2);
-          __PYX_XDEC_MEMVIEW(&__pyx_t_7, 0);
-          __pyx_t_7.memview = NULL;
-          __pyx_t_7.data = NULL;
+__pyx_f_10msmbuilder_3msm_15_ratematrix_PES_cdaxpy((-__pyx_v_val), __pyx_t_8, __pyx_v_out2);
+          __PYX_XDEC_MEMVIEW(&__pyx_t_8, 0);
+          __pyx_t_8.memview = NULL;
+          __pyx_t_8.data = NULL;
 
           /* "msmbuilder/msm/_ratematrix_PES.pyx":310
  *                 out[n_trid + i] += val
@@ -9369,6 +9387,14 @@ __pyx_f_10msmbuilder_3msm_15_ratematrix_PES_cdaxpy((-__pyx_v_val), __pyx_t_7, __
       }
       __pyx_L9_continue:;
     }
+
+    /* "msmbuilder/msm/_ratematrix_PES.pyx":291
+ *                 cdaxpy(val, x=A[n_trid + j, :], y=out2)
+ * 
+ *     elif i==j:             # <<<<<<<<<<<<<<
+ *         for jj in range(i-1, i+2):
+ *             if jj < 0 or jj==i or jj >= n:
+ */
   }
   __pyx_L5:;
 
@@ -9392,7 +9418,7 @@ __pyx_f_10msmbuilder_3msm_15_ratematrix_PES_cdaxpy((-__pyx_v_val), __pyx_t_7, __
 
   /* function exit code */
   __pyx_L1_error:;
-  __PYX_XDEC_MEMVIEW(&__pyx_t_7, 0);
+  __PYX_XDEC_MEMVIEW(&__pyx_t_8, 0);
   __Pyx_WriteUnraisable("msmbuilder.msm._ratematrix_PES.dK_dtheta_u", __pyx_clineno, __pyx_lineno, __pyx_filename, 1, 1);
   __pyx_r = 0;
   __pyx_L0:;

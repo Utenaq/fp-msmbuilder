@@ -194,8 +194,8 @@ cpdef double dK_dtheta_ij(const double[::1] theta, npy_intp n, npy_intp u,
         #            * 
         #              *
 
-        for j in range (i-1, i+1): #NOTE: Simplified for the tridiagonal case
-            if i<0 or i==j or i>=n:
+        for j in range (i-1, i+2): #NOTE: Simplified for the tridiagonal case
+            if j<0 or i==j or j>=n:
                 continue
 
             k = ij_to_k(i, j, n)
@@ -272,7 +272,7 @@ cpdef int dK_dtheta_u(const double[::1] theta, npy_intp n, npy_intp i,
     pi_i = exp(theta[n_trid+i])
     pi_j = exp(theta[n_trid+j])
 
-    if i != j:
+    if abs(i - j) == 1:
         s_ij = theta[u]
         sqrt_pi_j_over_i = sqrt(pi_j / pi_i)
         out[u] += sqrt_pi_j_over_i
@@ -288,8 +288,8 @@ cpdef int dK_dtheta_u(const double[::1] theta, npy_intp n, npy_intp i,
                 cdaxpy(-val, x=A[n_trid + i, :], y=out2)
                 cdaxpy(val, x=A[n_trid + j, :], y=out2)
 
-    else:
-        for jj in range(i-1, i+1):
+    elif i==j:
+        for jj in range(i-1, i+2):
             if jj < 0 or jj==i or jj >= n:
                 continue
 
