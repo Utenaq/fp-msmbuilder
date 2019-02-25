@@ -1,3 +1,7 @@
+# Modified to support efficient estimation of rate matrices given by an 1D potential energy surface.
+# Edited by: Zhuoran Qiao <utenaq@gmail.com>
+# 2019, Peking University.
+
 # cython: boundscheck=False, cdivision=True, wraparound=False, c_string_encoding=ascii
 # Author: Robert McGibbon <rmcgibbo@gmail.com>
 # Contributors:
@@ -32,7 +36,7 @@ from libc.string cimport memset, strcmp
 
 include "../src/cy_blas.pyx"
 include "../src/config.pxi"
-include "../src/triu_utils.pyx"      # ij_to_k() and k_to_ij()
+include "../src/trid_utils.pyx"      # ij_to_k() and k_to_ij()
 include "_ratematrix_support.pyx"
 include "_ratematrix_priors.pyx"
 
@@ -48,7 +52,7 @@ cpdef int build_ratemat(const double[::1] theta, npy_intp n, double[:, ::1] out,
     ----------
     theta : array
         The free parameters, `\theta`. These values are the linearized elements
-        of the upper triangular portion of the symmetric rate matrix, S,
+        of the upper DIAGONAL elements of the symmetric rate matrix, S,
         followed by the log equilibrium weights.
     n : int
         Dimension of the rate matrix, K, (number of states)
@@ -58,26 +62,26 @@ cpdef int build_ratemat(const double[::1] theta, npy_intp n, double[:, ::1] out,
         On exit, out contains the matrix K or S
     """
     cdef npy_intp u = 0, k = 0, i = 0, j = 0
-    cdef npy_intp n_triu = n*(n-1)/2
+    cdef npy_intp n_trid = n-1
     cdef double s_ij, K_ij, K_ji
     cdef double[::1] pi
     cdef int buildS = strcmp(which, 'S') == 0
     if DEBUG:
         assert out.shape[0] == n
         assert out.shape[1] == n
-        assert theta.shape[0] == n_triu + n
+        assert theta.shape[0] == n_trid + n
         assert np.all(np.asarray(out) == 0)
 
     pi = zeros(n)
     for i in range(n):
-        pi[i] = exp(theta[n_triu+i])
+        pi[i] = exp(theta[n_trid+i])
 
-    for u in range(n_triu):
+    for u in range(n_trid):
         k_to_ij(u, n, &i, &j)
         s_ij = theta[u]
 
         if DEBUG:
-            assert 0 <= u < n*(n-1)/2
+            assert 0 <= u < (n-1)
 
         K_ij = s_ij * sqrt(pi[j] / pi[i])
         K_ji = s_ij * sqrt(pi[i] / pi[j])
@@ -137,27 +141,27 @@ cpdef double dK_dtheta_ij(const double[::1] theta, npy_intp n, npy_intp u,
     s : double
         The sum of the element-wise product of dK/du and A, if A is not None.
     """
-    cdef npy_intp n_triu = n*(n-1)/2
+    cdef npy_intp n_trid = n-1
     cdef npy_intp a, i, j
     cdef double dK_i, s_ij, dK_ij, dK_ji, pi_i, pi_j
     cdef double sum_elem_product = 0
     if DEBUG:
         assert out.shape[0] == n and out.shape[1] == n
         assert A.shape[0] == n and A.shape[1] == n
-        assert theta.shape[0] == n_triu + n
+        assert theta.shape[0] == n_trid + n
 
     if out is not None:
         memset(&out[0,0], 0, n*n*sizeof(double))
 
-    if u < n_triu:
-        # the perturbation is to the triu rate matrix
+    if u < n_trid:
+        # the perturbation is to the tridiagonal rate matrix
         # first, use the linear index, u, to get the (i,j)
         # indices of the symmetric rate matrix
         k_to_ij(u, n, &i, &j)
 
         s_ij = theta[u]
-        pi_i = exp(theta[n_triu+i])
-        pi_j = exp(theta[n_triu+j])
+        pi_i = exp(theta[n_trid+i])
+        pi_j = exp(theta[n_trid+j])
         dK_ij = sqrt(pi_j / pi_i)
         dK_ji = sqrt(pi_i / pi_j)
 
@@ -178,25 +182,25 @@ cpdef double dK_dtheta_ij(const double[::1] theta, npy_intp n, npy_intp u,
 
         # `i` is now the index, in `pi`, of the perturbed element
         # of the equilibrium distribution.
-        i = u - n_triu
-        pi_i = exp(theta[n_triu+i])
+        i = u - n_trid
+        pi_i = exp(theta[n_trid+i])
 
         # the matrix dKu has 1 nonzero row, 1 column, and the diagonal. e.g:
         #
-        #    x     x
-        #      x   x
-        #        x x
-        #    x x x x x x
-        #          x x
-        #          x   x
+        #    * 
+        #      x x
+        #      x x x
+        #        x x 
+        #            * 
+        #              *
 
-        for j in range(n):
-            if j == i:
+        for j in range (i-1, i+1): #NOTE: Simplified for the tridiagonal case
+            if i<0 or i==j or i>=n:
                 continue
 
             k = ij_to_k(i, j, n)
             s_ij = theta[k]
-            pi_j = exp(theta[n_triu+j])
+            pi_j = exp(theta[n_trid+j])
             dK_ij = -0.5 * s_ij * sqrt(pi_j / pi_i)
             dK_ji = 0.5  * s_ij * sqrt(pi_i / pi_j)
 
@@ -251,11 +255,11 @@ cpdef int dK_dtheta_u(const double[::1] theta, npy_intp n, npy_intp i,
         is written, ``out2 = np.dot(out, A)``.
 
     """
-    cdef npy_intp n_triu = n*(n-1)/2
+    cdef npy_intp n_trid = n-1
     cdef npy_intp u, jj, size
     cdef double dK_i, dK_ij, dK_ji, pi_i, pi_j, pi_jj, val, sqrt_pi_j_over_i
     cdef double s_ij = 0
-    size = n_triu + n
+    size = n_trid + n
     cdef int compute_out2 = (A is not None and out2 is not None)
 
     if DEBUG:
@@ -263,10 +267,10 @@ cpdef int dK_dtheta_u(const double[::1] theta, npy_intp n, npy_intp i,
         assert out.shape[0] == size
         assert out2 is None or out2.shape[0] == size
 
-    # For u in 0...n_triu-1
+    # For u in 0...n_trid-1
     u = ij_to_k(i, j, n)
-    pi_i = exp(theta[n_triu+i])
-    pi_j = exp(theta[n_triu+j])
+    pi_i = exp(theta[n_trid+i])
+    pi_j = exp(theta[n_trid+j])
 
     if i != j:
         s_ij = theta[u]
@@ -275,24 +279,24 @@ cpdef int dK_dtheta_u(const double[::1] theta, npy_intp n, npy_intp i,
         if compute_out2:
             cdaxpy(sqrt_pi_j_over_i, x=A[u, :], y=out2)
 
-        # for u in n_triu...size-1
+        # for u in n_trid...size-1
         if s_ij != 0:
             val = 0.5 * s_ij * sqrt_pi_j_over_i
-            out[n_triu + i] -= val
-            out[n_triu + j] += val
+            out[n_trid + i] -= val
+            out[n_trid + j] += val
             if compute_out2:
-                cdaxpy(-val, x=A[n_triu + i, :], y=out2)
-                cdaxpy(val, x=A[n_triu + j, :], y=out2)
+                cdaxpy(-val, x=A[n_trid + i, :], y=out2)
+                cdaxpy(val, x=A[n_trid + j, :], y=out2)
 
     else:
-        for jj in range(n):
-            if jj == i:
+        for jj in range(i-1, i+1):
+            if jj < 0 or jj==i or jj >= n:
                 continue
 
             u = ij_to_k(i, jj, n)
             s_ij = theta[u]
 
-            pi_jj = exp(theta[n_triu+jj])
+            pi_jj = exp(theta[n_trid+jj])
             sqrt_pi_j_over_i = sqrt(pi_jj / pi_i)
 
             out[u] -= sqrt_pi_j_over_i
@@ -301,11 +305,11 @@ cpdef int dK_dtheta_u(const double[::1] theta, npy_intp n, npy_intp i,
 
             if s_ij != 0:
                 val = 0.5 * s_ij * sqrt_pi_j_over_i
-                out[n_triu + i] += val
-                out[n_triu + jj] -= val
+                out[n_trid + i] += val
+                out[n_trid + jj] -= val
                 if compute_out2:
-                    cdaxpy(val, x=A[n_triu + i, :], y=out2)
-                    cdaxpy(-val, x=A[n_triu + jj, :], y=out2)
+                    cdaxpy(val, x=A[n_trid + i, :], y=out2)
+                    cdaxpy(-val, x=A[n_trid + jj, :], y=out2)
 
     return 0
 
@@ -317,7 +321,7 @@ def loglikelihood(const double[::1] theta, const double[:, ::1] counts, double t
 
     Parameters
     ----------
-    theta : array of shape = (n*(n-1)/2 + n) for dense or shorter
+    theta : array of shape = (2n-1) for dense or shorter
         The free parameters of the model. These values are the (possibly sparse)
         linearized elements of the log of the  upper triangular portion of the
         symmetric rate matrix, S, followed by the log of the equilibrium
@@ -331,15 +335,15 @@ def loglikelihood(const double[::1] theta, const double[:, ::1] counts, double t
     -------
     logl : double
         The log likelihood of the parameters.
-    grad : array of shape = (n*(n-1)/2 + n)
+    grad : array of shape = n-1 + n)
         The gradient of the log-likelihood with respect to `\theta`
     """
     cdef npy_intp n = counts.shape[0]
-    cdef npy_intp n_triu = n*(n-1)/2
+    cdef npy_intp n_trid = n-1
     if not (counts.shape[0] == n and counts.shape[1] == n):
         raise ValueError('counts must be n x n')
-    if not theta.shape[0] == n_triu + n:
-        raise ValueError('theta must have shape n*(n+1)/2+n')
+    if not theta.shape[0] == n_trid + n:
+        raise ValueError('theta must have shape n-1+n')
 
     cdef npy_intp u, i, j
     cdef npy_intp size = theta.shape[0]
@@ -353,14 +357,15 @@ def loglikelihood(const double[::1] theta, const double[:, ::1] counts, double t
     dT = zeros((n, n))
 
     build_ratemat(theta, n, S, 'S')
-    if not np.all(np.isfinite(S)):
-        # these parameters don't seem good...
-        # tell the optimizer to stear clear!
+    if not np.all(np.isfinite(scipy.sparse.linalg.expm(t*S))):
+        # Instead of imposing strong positive definite constraint to S,
+        # for a rate matrix given by a potential of mean force, we check
+        # if the transiton matrix is a 'good' operator.
         return np.nan, ascontiguousarray(grad)
 
     pi = zeros(n)
     for i in range(n):
-        pi[i] = exp(theta[n_triu+i])
+        pi[i] = exp(theta[n_trid+i])
 
     w, U, V = eig_K(S, n, pi, 'S')
     dT_dtheta(w, U, V, counts, n, t, T, dT)
@@ -384,7 +389,7 @@ def hessian(double[::1] theta, double[:, ::1] counts, double t=1, npy_intp[::1] 
 
     Parameters
     ----------
-    theta : array of shape = (n*(n-1)/2 + n) for dense or shorter
+    theta : array of shape = (2n-1) for dense or shorter
         The free parameters of the model. These values are the (possibly sparse)
         linearized elements of the log of the  upper triangular portion of the
         symmetric rate matrix, S, followed by the log of the equilibrium
@@ -412,11 +417,11 @@ def hessian(double[::1] theta, double[:, ::1] counts, double t=1, npy_intp[::1] 
         An estimate of the hessian of the log-likelihood
     """
     cdef npy_intp n = counts.shape[0]
-    cdef npy_intp n_triu = n*(n-1)/2
+    cdef npy_intp n_trid = (n-1)
     if not (counts.shape[0] == n and counts.shape[1] == n):
         raise ValueError('counts must be n x n')
-    if theta.shape[0] != n_triu + n:
-        raise ValueError('theta must have shape n*(n+1)/2+n')
+    if theta.shape[0] != n_trid + n:
+        raise ValueError('theta must have shape n-1+n')
 
     cdef npy_intp size = theta.shape[0]
     cdef npy_intp u, uu, v, vv, i, j
@@ -443,7 +448,7 @@ def hessian(double[::1] theta, double[:, ::1] counts, double t=1, npy_intp[::1] 
     transtheta = zeros(size)
 
     for i in range(n):
-        pi[i] = exp(theta[n_triu+i])
+        pi[i] = exp(theta[n_trid+i])
 
     build_ratemat(theta, n, S, 'S')
     w, U, V = eig_K(S, n, pi, 'S')
@@ -501,7 +506,7 @@ def sigma_K(const double[:, ::1] covar_theta, const double[::1] theta, npy_intp 
     covar_theta : array, shape=(len(theta), len(theta))
         Covariance matrix of \theta. This is estimated by the inverse hessian
         of the log likelihood function.
-    theta : array of shape = (n*(n-1)/2 + n)
+    theta : array of shape = (n-1) + n)
         The free parameters of the model at the MLE. These values are the
         linearized elements of the upper triangular portion of the symmetric
         rate matrix, S, followed by the log of the equilibrium distribution.
@@ -514,14 +519,14 @@ def sigma_K(const double[:, ::1] covar_theta, const double[::1] theta, npy_intp 
         Estimate of the element-wise asymptotic standard deviation of the
         rate matrix, K.
     """
-    cdef npy_intp n_triu = n*(n-1)/2
+    cdef npy_intp n_trid = n-1
     cdef npy_intp u, v, i, j
     cdef double var_K_ij
     cdef double[::1] temp, dKij
     cdef double[:, ::1] sigma_K
     cdef npy_intp size = theta.shape[0]
-    if theta.shape[0] != n_triu + n:
-        raise ValueError('theta must have shape n*(n+1)/2+n')
+    if theta.shape[0] != n_trid + n:
+        raise ValueError('theta must have shape n-1+n')
     if not covar_theta.shape[0] == size and covar_theta.shape[1] == size:
         raise ValueError('covar_theta must be `size` x `size`')
 
@@ -554,7 +559,7 @@ def sigma_pi(const double[:, :] covar_theta, const double[::1] theta, npy_intp n
     covar_theta : array, shape=(len(theta), len(theta))
         Covariance matrix of \theta. This is estimated by the inverse hessian
         of the log likelihood function.
-    theta : array of shape = (n*(n-1)/2 + n)
+    theta : array of shape = n-1 + n)
         The free parameters of the model at the MLE. These values are the
         linearized elements of the upper triangular portion of the symmetric
         rate matrix, S, followed by the log of the equilibrium distribution.
@@ -568,10 +573,10 @@ def sigma_pi(const double[:, :] covar_theta, const double[::1] theta, npy_intp n
         distribution, \pi.
     """
     cdef npy_intp i, j
-    cdef npy_intp n_triu = n*(n-1)/2
+    cdef npy_intp n_trid = n-1
     cdef npy_intp size = theta.shape[0]
-    if theta.shape[0] != n_triu + n:
-        raise ValueError('theta must have shape n*(n+1)/2+n')
+    if theta.shape[0] != n_trid + n:
+        raise ValueError('theta must have shape (n+1)+n')
     if not covar_theta.shape[0] == size and covar_theta.shape[1] == size:
         raise ValueError('covar_theta must be `size` x `size`')
 
@@ -584,7 +589,7 @@ def sigma_pi(const double[:, :] covar_theta, const double[::1] theta, npy_intp n
 
     # z = sum(pi)
     for i in range(n):
-        pi_i = exp(theta[n_triu+i])
+        pi_i = exp(theta[n_trid+i])
         z += pi_i
         pi[i] = pi_i
 
@@ -595,7 +600,7 @@ def sigma_pi(const double[:, :] covar_theta, const double[::1] theta, npy_intp n
     # so that we can use BLAS
     for i in range(n):
         for j in range(n):
-            C_block[i,j] = covar_theta[n_triu+i, n_triu+j]
+            C_block[i,j] = covar_theta[n_trid+i, n_trid+j]
 
     # build the Jacobian, \frac{d\pi}{d\theta}
     for i in range(n):
@@ -627,7 +632,7 @@ def sigma_eigenvalues(const double[:, ::1] covar_theta, const double[::1] theta,
     covar_theta : array, shape=(len(theta), len(theta))
         Covariance matrix of \theta. This is estimated by the inverse hessian
         of the log likelihood function.
-    theta : array of shape = (n*(n-1)/2 + n)
+    theta : array of shape = (n-1) + n)
         The free parameters of the model at the MLE. These values are the
         linearized elements of the upper triangular portion of the symmetric
         rate matrix, S, followed by the log of the equilibrium distribution.
@@ -640,15 +645,15 @@ def sigma_eigenvalues(const double[:, ::1] covar_theta, const double[::1] theta,
         Estimate of the element-wise asymptotic standard deviation of the
         eigenvalues of the rate matrix (in sorted order).
     """
-    cdef npy_intp n_triu = n*(n-1)/2
+    cdef npy_intp n_trid = n-1
     cdef npy_intp u, v, i
     cdef double var_w_i
     cdef double[::1] pi, sigma_w, temp1, temp2
     cdef double[:, ::1] S, U, V, dKu
     cdef double[::1, :] dlambda_dtheta
     cdef npy_intp size = theta.shape[0]
-    if theta.shape[0] != n_triu + n:
-        raise ValueError('theta must have shape n*(n+1)/2+n')
+    if theta.shape[0] != n_trid + n:
+        raise ValueError('theta must have shape n-1+n')
     if not covar_theta.shape[0] == size and covar_theta.shape[1] == size:
         raise ValueError('covar_theta must be `size` x `size`')
 
@@ -661,7 +666,7 @@ def sigma_eigenvalues(const double[:, ::1] covar_theta, const double[::1] theta,
     dlambda_dtheta = np.zeros((n, size), order='F')
 
     for i in range(n):
-        pi[i] = exp(theta[n_triu+i])
+        pi[i] = exp(theta[n_trid+i])
 
     build_ratemat(theta, n, S, 'S')
     w, U, V = eig_K(S, n, pi, 'S')
@@ -696,7 +701,7 @@ def sigma_timescales(const double[:, ::1] covar_theta, const double[::1] theta,
     covar_theta : array, shape=(len(theta), len(theta))
         Covariance matrix of \theta. This is estimated by the inverse hessian
         of the log likelihood function.
-    theta : array of shape = (n*(n-1)/2 + n)
+    theta : array of shape = n-1
         The free parameters of the model at the MLE. These values are the
         linearized elements of the upper triangular portion of the symmetric
         rate matrix, S, followed by the log of the equilibrium distribution.
@@ -709,15 +714,15 @@ def sigma_timescales(const double[:, ::1] covar_theta, const double[::1] theta,
         Estimate of the element-wise asymptotic standard deviation of the
         relaxation timescales of the model.
     """
-    cdef npy_intp n_triu = n*(n-1)/2
+    cdef npy_intp n_trid = n-1
     cdef npy_intp u, v, i
     cdef double var_tau_i, d_lambda_i_d_theta_u
     cdef double[::1] pi, w, sigma_tau, dw_u, temp1, temp2
     cdef double[:, ::1] S, U, V, dKu, dtau_dtheta
     cdef double[::1, :] dlambda_dtheta
     cdef npy_intp size = theta.shape[0]
-    if theta.shape[0] != n_triu + n:
-        raise ValueError('theta must have shape n*(n+1)/2+n')
+    if theta.shape[0] != n_trid + n:
+        raise ValueError('theta must have shape (n-1)+n')
     if not covar_theta.shape[0] == size and covar_theta.shape[1] == size:
         raise ValueError('covar_theta must be `size` x `size`')
 
@@ -731,7 +736,7 @@ def sigma_timescales(const double[:, ::1] covar_theta, const double[::1] theta,
     dtau_dtheta = np.zeros((n, size))
 
     for i in range(n):
-        pi[i] = exp(theta[n_triu+i])
+        pi[i] = exp(theta[n_trid+i])
 
     build_ratemat(theta, n, S, 'S')
     w, U, V = eig_K(S, n, pi, 'S')

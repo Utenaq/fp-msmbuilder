@@ -127,6 +127,14 @@ extensions.append(
               include_dirs=['msmbuilder/src', np.get_include()]))
 
 extensions.append(
+    Extension('msmbuilder.msm._ratematrix_PES',
+              sources=[pjoin(MSMDIR, '_ratematrix_PES.pyx')],
+              language='c++',
+              extra_compile_args=compiler.compiler_args_openmp,
+              libraries=compiler.compiler_libraries_openmp,
+              include_dirs=['msmbuilder/src', np.get_include()]))
+
+extensions.append(
     Extension('msmbuilder.decomposition._speigh',
               sources=[pjoin('msmbuilder', 'decomposition', '_speigh.pyx')],
               language='c++',

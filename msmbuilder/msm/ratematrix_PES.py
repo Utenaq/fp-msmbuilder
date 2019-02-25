@@ -1,3 +1,7 @@
+# Modified to support efficient estimation of rate matrices given by an 1D potential energy surface.
+# Edited by: Zhuoran Qiao <utenaq@gmail.com>
+# 2019, Peking University.
+
 # Author: Robert McGibbon <rmcgibbo@gmail.com>
 # Contributors:
 # Copyright (c) 2014, Stanford University
@@ -10,7 +14,7 @@ import scipy.linalg
 import scipy.optimize
 from six.moves import cStringIO
 
-from . import _ratematrix
+from . import _ratematrix_PES
 from ._markovstatemodel import _transmat_mle_prinz
 from .core import (_MappingTransformMixin, _CountsMSMMixin, _dict_compose,
                    _solve_ratemat_eigensystem, _SampleMSMMixin)
@@ -18,7 +22,7 @@ from ..base import BaseEstimator
 from ..utils import printoptions
 
 
-class ContinuousTimeMSM(BaseEstimator, _MappingTransformMixin,
+class PESContinuousTimeMSM(BaseEstimator, _MappingTransformMixin,
                         _CountsMSMMixin, _SampleMSMMixin):
     """Reversible first order master equation model
 
@@ -85,7 +89,7 @@ class ContinuousTimeMSM(BaseEstimator, _MappingTransformMixin,
         need not necessarily be integers in (0, ..., n_states_ - 1), for
         example. The semantics of ``mapping_[i] = j`` is that state ``i`` from
         the "input space" is represented by the index ``j`` in this MSM.
-    theta_ : array of shape n*(n+1)/2 or shorter
+    theta_ : array of shape (2n+1) or shorter
         Optimized set of parameters for the model.
     information_ : np.ndarray, shape=(len(theta_), len(theta_))
         Approximate inverse of the hessian of the model log-likelihood
@@ -145,7 +149,7 @@ class ContinuousTimeMSM(BaseEstimator, _MappingTransformMixin,
         result, loglikelihoods = self._optimize()
 
         K = np.zeros((self.n_states_, self.n_states_))
-        _ratematrix.build_ratemat(result.x, self.n_states_, K, which='K')
+        _ratematrix_PES.build_ratemat(result.x, self.n_states_, K, which='K')
 
         self.theta_ = result.x
         self.ratemat_ = K
@@ -162,6 +166,7 @@ class ContinuousTimeMSM(BaseEstimator, _MappingTransformMixin,
         k = n_timescales + 1
         self.eigenvalues_, self.left_eigenvectors_, self.right_eigenvectors_ = \
             _solve_ratemat_eigensystem(self.theta_, k, self.n_states_)
+
         self.timescales_ = -1 / self.eigenvalues_[1:]
 
         return self
@@ -184,7 +189,7 @@ class ContinuousTimeMSM(BaseEstimator, _MappingTransformMixin,
     def _optimize(self):
         countsmat = self.countsmat_
         n = countsmat.shape[0]
-        nc2 = int(n*(n-1)/2)
+        nc2 = int(n-1)
         theta0 = self._initial_guess(countsmat)
         lag_time = float(self.lag_time)
         loglikelihoods = []
@@ -197,7 +202,7 @@ class ContinuousTimeMSM(BaseEstimator, _MappingTransformMixin,
         }
 
         def objective(theta):
-            f, g = _ratematrix.loglikelihood(theta, countsmat, lag_time)
+            f, g = _ratematrix_PES.loglikelihood(theta, countsmat, lag_time)
 
             if not np.isfinite(f):
                 f = np.nan
@@ -224,7 +229,7 @@ class ContinuousTimeMSM(BaseEstimator, _MappingTransformMixin,
         if self.information_ is None:
             self._build_information()
 
-        sigma_K = _ratematrix.sigma_K(
+        sigma_K = _ratematrix_PES.sigma_K(
             self.information_, theta=self.theta_, n=self.n_states_)
         return sigma_K
 
@@ -235,7 +240,7 @@ class ContinuousTimeMSM(BaseEstimator, _MappingTransformMixin,
         if self.information_ is None:
             self._build_information()
 
-        sigma_pi = _ratematrix.sigma_pi(
+        sigma_pi = _ratematrix_PES.sigma_pi(
             self.information_, theta=self.theta_, n=self.n_states_)
         return sigma_pi
 
@@ -246,7 +251,7 @@ class ContinuousTimeMSM(BaseEstimator, _MappingTransformMixin,
         if self.information_ is None:
             self._build_information()
 
-        sigma_eigenvalues = _ratematrix.sigma_eigenvalues(
+        sigma_eigenvalues = _ratematrix_PES.sigma_eigenvalues(
             self.information_, theta=self.theta_, n=self.n_states_)
 
         if self.n_timescales is None:
@@ -260,7 +265,7 @@ class ContinuousTimeMSM(BaseEstimator, _MappingTransformMixin,
         if self.information_ is None:
             self._build_information()
 
-        sigma_timescales = _ratematrix.sigma_timescales(
+        sigma_timescales = _ratematrix_PES.sigma_timescales(
             self.information_, theta=self.theta_, n=self.n_states_)
 
         if self.n_timescales is None:
@@ -287,8 +292,10 @@ class ContinuousTimeMSM(BaseEstimator, _MappingTransformMixin,
             K = self.guess
 
         S = np.multiply(np.sqrt(np.outer(pi, 1/pi)), K)
-        sflat = np.maximum(S[np.triu_indices_from(countsmat, k=1)], 0)
+        sflat = np.maximum(S[np.arange(self.n_states_-1),np.arange(1,self.n_states_)], 0)
         theta0 = np.concatenate((sflat, np.log(pi)))
+        # if len(theta0) != 2*self.n_states_-1:
+        #     raise ValueError
         return theta0
 
     def _build_information(self):
@@ -300,7 +307,7 @@ class ContinuousTimeMSM(BaseEstimator, _MappingTransformMixin,
         # feasible set.
         inds = np.where(self.theta_ != 0)[0]
 
-        hessian = _ratematrix.hessian(
+        hessian = _ratematrix_PES.hessian(
             self.theta_, self.countsmat_, t=lag_time, inds=inds)
 
         self.information_ = np.zeros((len(self.theta_), len(self.theta_)))
