@@ -40,7 +40,7 @@ cpdef eig_K(const double[:, ::1] A, npy_intp n, double[::1] pi=None, which='K'):
     V = zeros((n, n), order='F')
 
     if which == 'S':
-        w, VS = scipy.linalg.eigh_tridiagonal(A)
+        w, VS = scipy.linalg.eigh(A)
         with nogil:
             for j in range(n):
                 for i in range(n):

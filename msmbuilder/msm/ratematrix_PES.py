@@ -176,6 +176,7 @@ class PESContinuousTimeMSM(BaseEstimator, _MappingTransformMixin,
         with printoptions(precision=4):
             print('n_states: %s' % self.n_states_, file=out)
             print(self.optimizer_state_.message, file=out)
+            print('theta\n', self.theta_, file=out)
             print('ratemat\n', self.ratemat_, file=out)
             print('transmat\n', self.transmat_, file=out)
             print('populations\n', self.populations_, file=out)
@@ -288,7 +289,7 @@ class PESContinuousTimeMSM(BaseEstimator, _MappingTransformMixin,
             K = (transmat - np.eye(self.n_states_)) / self.lag_time
 
         elif isinstance(self.guess, np.ndarray):
-            pi = _solve_ratemat_eigensystem(self.guess)[1][:, 0]
+            pi = _solve_PES_ratemat_eigensystem(self.guess)[1][:, 0]
             K = self.guess
 
         S = np.multiply(np.sqrt(np.outer(pi, 1/pi)), K)
