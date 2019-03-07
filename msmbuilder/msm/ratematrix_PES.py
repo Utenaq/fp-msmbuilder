@@ -197,12 +197,14 @@ class PESContinuousTimeMSM(BaseEstimator, _MappingTransformMixin,
 
         options = {
             'iprint': 0 if self.verbose else -1,
-            'eps': 1e-12,
-            'ftol': 1e-12,
+            'eps': 1e-15,
+            'ftol': 1e-10,
             'gtol': 1e-10,
         }
 
         def objective(theta):
+
+            print('ITER: THETA='+' '.join(map(str, theta))+'\n')
             f, g = _ratematrix_PES.loglikelihood(theta, countsmat, lag_time)
 
             if not np.isfinite(f):

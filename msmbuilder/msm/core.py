@@ -183,6 +183,7 @@ class _MappingTransformMixin(TransformerMixin):
         return result
 
 class _CountsMSMMixin(object):
+
     def _build_counts(self, sequences, y=None):
         sequences = list_of_1d(sequences)
         # step 1. count the number of transitions

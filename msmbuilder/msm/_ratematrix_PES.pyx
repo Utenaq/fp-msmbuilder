@@ -357,12 +357,15 @@ def loglikelihood(const double[::1] theta, const double[:, ::1] counts, double t
     dT = zeros((n, n))
 
     build_ratemat(theta, n, S, 'S')
-    
-    if not np.all(np.isfinite(scipy.linalg.expm(t*S))):
-        # Instead of imposing strong positive definite constraint to S,
-        # for a rate matrix given by a potential of mean force, we check
-        # if the transiton matrix is a 'good' operator.
-        return np.nan, ascontiguousarray(grad)
+
+    try:
+        if not np.all(np.isfinite(scipy.linalg.expm(t*S))):
+            # Instead of imposing strong positive definite constraint to S,
+            # for a rate matrix given by a potential of mean force, we check
+            # if the transiton matrix is a 'good' operator.
+            return np.nan, ascontiguousarray(grad)
+    except ValueError:
+        print(S)
 
     pi = zeros(n)
     for i in range(n):
